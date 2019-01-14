@@ -1,12 +1,10 @@
-name = "Ztarting Item Tuner"
+name = "Starting Item Tuner"
 description = "Let you set starting items you want."
 author = "Yakumo Yukari"
 version = "1.0.0"
 forumthread = ""
 api_version = 6
 api_version_dst = 10
-priority = -2147483647
--- to make sure every asset is fully-loaded.
 dst_compatible = true
 dont_starve_compatible = false
 reign_of_giants_compatible = false
@@ -15,29 +13,36 @@ all_clients_require_mod = true
 icon_atlas = "modicon.xml"
 icon = "modicon.tex"
 
-server_filter_tags = {
-	"serveradmin",
+server_filter_tags = {"serveradmin", "startingitem"}
+local on_off = {
+	{ description = "true", data = true },
+	{ description = "false", data = false },
 }
 
 configuration_options = {
 	{
 		name = "ShouldOverrideVanila",
 		description = "If true, default starting items of vanila charachers will be removed and replaced. Otherwise, will be added to default starting items.",
-		default = false
+		options = on_off,
+		default = false,
 	},
 	{
 		name = "ShouldOverrideMod",
 		description = "Same with the above, but it's only for mod characters.",
-		default = false
+		options = on_off,
+		default = false,
 	},
 	{
 		name = "datatable",
-		description = "Read below very carefully. You can combine multiple options by concatenating keywords. and keyword order is not important.",
+		description = "You have to add settings in data.lua in the mod folder.",
 		default = {
 			["AllPlayers"] = {
 				--["spring"] = {
-					-- {"grass_umbrella"}
-					-- gives 1 pretty parasol when is spring. 
+					-- "grass_umbrella", "*rainhat"
+					-- gives 1 pretty parasol and unlock rainhat's recipe when is spring. 
+
+					-- You can unlock specific item's recipe by writing "*" in the keyword.
+					-- If you want blue print instead, add "_blueprint" instead. ex) rainhat_blueprint
 				--},
 				--["summer"] = { },
 				--["autumn"] = { },
@@ -67,9 +72,9 @@ configuration_options = {
 				-- [""] = { } -- same as "anytimealwaysnewspawn"
 				--------------------------------------------------------------------------------------
 				
-				["respawn"] = { 
-					-- when the character is resurrected(including touchstone, but not telltale heart or life giving amulet.)
-					{ "torch", "sanity", 30 } 
+				["respawnnight"] = { 
+					-- when the character is resurrected(including touchstone, but not telltale heart or life giving amulet.) and it's night.
+					"torch", "sanity", 30 
 					-- you can give the specific amount of stats.
 					
 					-- same as "respawnalways", "portaltouchstoneeffigy", "portaltouchstoneeffigyalways"
@@ -89,7 +94,7 @@ configuration_options = {
 			},
 
 			["wilson"] = {
-				--[""] = {{"beardhair", 4}} -- gives 4 beards when first spawn.
+				[""] = {"beardhair", 4} -- gives 4 beards when first spawn.
 			},
 			-- ["yakumoyukari"] = { [""] = {"humanmeat", 4, "schemetool"} }, 
 			-- also supports mod characters and mod items(but you have to put prefab(console) name).

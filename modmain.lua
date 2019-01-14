@@ -1,99 +1,199 @@
 PrefabFiles = { }
 
 local assert = GLOBAL.assert
+local require = GLOBAL.require
+local tonumber = GLOBAL.tonumber
 local Prefabs = GLOBAL.Prefabs
 local KnownModIndex = GLOBAL.KnownModIndex
-local modname = KnownModIndex:GetModActualName("Ztarting Item Tuner")
+local SpawnPrefab = GLOBAL.SpawnPrefab
+local modname = KnownModIndex:GetModActualName("Starting Item Tuner")
 
-GLOBAL.STARTING_ITEM_TUNER_MODNAME = modname
-local function GetModDefaultConfigData(optionname, modname)
-	local config = KnownModIndex.savedata.known_mods[modname].modinfo.configuration_options
-	if config and type(config) == "table" then
-		for i,v in pairs(config) do
-			if v.name == optionname then
-				return v.default
+local ShouldOverrideVanilla = GetModConfigData("ShouldOverrideVanila", modname)
+local ShouldOverrideMod = GetModConfigData("ShouldOverrideMod", modname)
+
+local raw = require("data")
+GLOBAL.SIT_DATA = {}
+GLOBAL.SIT_EVENTS = {}
+-- Validate execution keys
+for k, v in pairs(raw) do
+	local _data = {}
+	for k2, v2 in pairs(v) do
+		local data = {}
+		local dindex, rindex = 1, 1
+		repeat
+			local c1 = tonumber(raw[k][k2][rindex]) == nil
+			local c2 = tonumber(raw[k][k2][rindex+1]) == nil
+			if rindex == 1 and not c1 then
+				print("wrong data at "..k.."."..k2.." #"..rindex..", first key should not be numeric.")
+				rindex = rindex + 1
+			elseif c1 and c2 then
+				data[dindex] = raw[k][k2][rindex]
+				data[dindex+1] = 1
+				rindex = rindex + 1
+				dindex = dindex + 2
+			elseif c1 and not c2 then
+				data[dindex] = raw[k][k2][rindex]
+				data[dindex+1] = raw[k][k2][rindex+1]
+				rindex = rindex + 2
+				dindex = dindex + 2
+			else
+				print("wrong data at #"..rindex..", numeric data was given two times in a row.")
+				rindex = rindex + 1
 			end
-		end
+		until rindex > #raw[k][k2]
+
+		_data[k2] = data
 	end
+	GLOBAL.SIT_DATA[k] = _data
 end
 
-GLOBAL.STARTINGITEMS = GetModDefaultConfigData("datatable", modname)
-local ShouldOverrideVanilla = GetModDefaultConfigData("ShouldOverrideVanila", modname)
-local ShouldOverrideMod = GetModDefaultConfigData("ShouldOverrideMod", modname)
-
-local CharacterList = {}
-for k, v in pairs(GLOBAL.STARTINGITEMS) do
-	table.insert(CharacterList, k)
-end
-
-local AllPlayers = {}
-local Characters = {}
-for _, charname in pairs(CharacterList) do
-	if charname ~= "AllPlayers" then
-		table.insert(AllPlayers, k)
-	else
-		table.insert(Characters, k)
-	end
-end
-
-local data = {}
-local function Dataization()
-	
-end
-
-
-GLOBAL.SIT_EVENTS = {
-	{ "_nullevent" } -- Lua is not zero-indexed but #table's index starts from 0. I have to put this because I want Event.id to start from 1.
-}
-
-local keywords = {
+local _KEYWORDS = {
 	time = { "anytime", "day", "dusk", "night" },
 	season = { "always", "spring", "summer", "autumn", "winter" },
 	respawn = { "respawn", "portal", "touchstone", "effigy" }, 
 	revived = { "revived", "heart", "amulet", "debug" },
 
-	other = { "change" }, -- do not check whether overlaps
+	other = { "change", "cave" }, -- do not check whether overlaps
 }
 
-local function DeserializeKeywords(key)
-	local keysfound = {}
-	local keywordsraw = {}
-	for k, v in pairs(keywords) do
-		for k2, v2 in pairs(v) do
-			table.insert(keywordsraw, v2)
+local WORDTAGS = { "cave" }
+for k, t in pairs(_KEYWORDS) do
+	if k == "time" or k == "season" then
+		for i, v in ipairs(t) do
+			table.insert(WORDTAGS, v)
 		end
 	end
+end
 
-	for i, v in ipairs(keywordsraw) do
-		local i1, i2 = string.find(tofind, v)
+local function GetFirstKey(list, tag)
+	for i, v in ipairs(list) do
+		if v:find(tag) then return v end
+	end
+end
 
-		if i1 ~= nil and i2 ~= nil then
-			local key = string.sub(tofind, i1, i2)
-			table.insert(keysfound, key)
+local function HasKey(list, tag)
+	if type(list) == "table" then
+		return GetFirstKey(list, tag) ~= nil
+	else
+		return string.find(list, tag) ~= nil
+	end
+end
 
-			tofind = tofind:gsub(key, "")
+local function RemoveKey(list, tag)
+	for i, v in ipairs(list) do
+		if v:find(tag) then table.remove(list, i) end
+	end
+end
+
+local function AddKey(list, tag)
+	table.insert(list, tag)
+end
+
+local function DeleteOverlaps(list)
+	for i, v in ipairs(list) do
+		local tofind = list[i]
+		for j = i + 1, #list do
+			if list[j] == tofind then
+				table.remove(list, i)
+			end
 		end
 	end
-
-	if tofind ~= "" then
-		print("[Starting Item Tuner] Unkown keyword "..tofind) -- This needs to be improved because it just return the leftover text...
-	end
-
 end
 
 local function GetWorldTags(tags)
 	local result = {}
-	for k, v in pairs(keywordsrawworld) do
-		for k2, v2 in pairs(tags) do
-			if v == v2 then
-				table.insert(result, v2)
-			end
+	local serialized = table.concat(tags)
+	for i, tag in ipairs(WORDTAGS) do
+		if HasKey(serialized, tag) then
+			table.insert(result, tag)
+		end
+	end
+	
+	if #result == 0 then
+		return nil
+	else
+		return result
+	end
+end
+
+local function RegisterEvent(name, data, tags)
+	local Event = {}
+	Event.id = #GLOBAL.SIT_EVENTS + 1
+	Event.doer = name
+	Event.tags = tags
+	Event.data = data
+	Event.worldtags = GetWorldTags(tags)
+	Event.fn = function(inst)
+		if CheckWorldState(Event.id) then
+			Excute(inst, Event.data)
 		end
 	end
 
-	result = #result == 0 and nil or result
+	table.insert(GLOBAL.SIT_EVENTS, Event)
+end
+-- Register Events
+for name, conditions in pairs(GLOBAL.SIT_DATA) do
+	for condition, data in pairs(conditions) do
+		local keyraw = condition
+		local leftover = keyraw
+		local tags = {}
 
-	return result
+		for sort, keys in pairs(_KEYWORDS) do
+			for _, key in ipairs(keys) do -- find keys in raw condition keys written in modinfo.
+				local i, j = string.find(leftover, key)
+
+				if i ~= nil and j ~= nil then
+					local tag = string.sub(leftover, i, j)
+					table.insert(tags, tag)
+
+					leftover = leftover:gsub(tag, "")
+				end
+			end
+			-- create tags
+			if sort ~= "other" and HasKey(tags, keys[1]) then -- "anytime", "always", ...
+				RemoveKey(tags, keys[1])
+				for i = 2, #keys do
+					AddKey(tags, keys[i])
+				end
+				DeleteOverlaps(tags)
+			end
+		end
+
+		if leftover ~= "" then
+			print("[Starting Item Tuner] Unkown condition key \""..leftover.."\" in \""..keyraw.."\" in "..(name == "AllPlayers" and "AllPlayers" or "character "..name))
+		end
+
+		RegisterEvent(name, data, tags)
+	end
+end
+	
+local function HasKeyInEvent(inst, tags)
+	-- it's quite brute-forcy right now. I have no idea how to handle events with tag.
+	local result = {}
+	for i, v in ipairs(GLOBAL.SIT_EVENTS) do
+		local raw = table.concat(v.tags)
+		if HasKey(tags, v2) then
+			table.insert(result, v.id)
+		end
+	end
+
+	if #result == 0 then
+		return nil
+	else
+		return result
+	end
+end
+
+local function OnEventListen(inst, tags)
+	local id = HasKeyInEvent(inst, tags)
+	if id ~= nil then
+		for i, v in ipairs(id) do
+			local EventDoer = GLOBAL.SIT_EVENTS[v].doer
+			if EventDoer == "AllPlayers" or inst.prefab == EventDoer then
+				GLOBAL.SIT_EVENTS[v].fn(inst)
+			end
+		end
+	end
 end
 
 local function CheckWorldState(id)
@@ -105,57 +205,90 @@ local function CheckWorldState(id)
 	
 	local shouldtrigger = true
 	local raw = table.concat(GLOBAL.SIT_EVENTS[id].tags)
-	local HasTag = function(tag) -- Just for optimization.
+	local HasKey = function(tag) -- Optimization.
 		return string.find(raw, tag) ~= nil
 	end
 	
-	if HasTag("spring") or HasTag("summer") or HasTag("autumn") or HasTag("winter") then -- check if season tags exist. otherwise, true.
-		shouldtrigger = HasTag(TheWorld.state.season)
+	if HasKey("spring") or HasKey("summer") or HasKey("autumn") or HasKey("winter") then -- check if season tags exist. otherwise, true.
+		shouldtrigger = HasKey(TheWorld.state.season)
 	end
 
-	if HasTag("day") or HasTag("dusk") or HasTag("night") then
-		shouldtrigger = shouldtrigger and HasTag(TheWorld.state.phase) -- need test in cave since it does have cavephase.
+	if HasKey("day") or HasKey("dusk") or HasKey("night") then
+		shouldtrigger = shouldtrigger and HasKey(TheWorld.state.phase) -- need test in cave since it does have cavephase.
+	end
+
+	if HasKey("cave") then
+		shouldtrigger = shouldtrigger and TheWorld:HasTag("cave")
 	end
 
 	return shouldtrigger
 end
 
-local function RegisterEvent(inst, _fn, ...)
-	local Event = {}
-	Event.id = #GLOBAL.SIT_EVENTS
-	Event.doer = inst.prefab
-	Event.tags = {...}
-	Event.worldtags = GetWorldTags({...})
-	Event.fn = function(inst, id)
-		if CheckWorldState(id) then
-			_fn(inst)
+local STATKEY = { 
+	"health", "hunger", "sanity", "power", "moisture"
+	-- TODO : "grogginess", "debuff"
+}
+local function InsertToDataTable(data, t, i)
+	table.insert(data, t[i])
+	table.insert(data, t[i+1]) -- amount
+end
+local function Dataize(data)
+	local stats = {}
+	local recipes = {}
+	local prefabs = {}
+
+	for i, v in ipairs(data) do
+		if HasKey(STATKEY, v) then
+			InsertToDataTable(stats, data, i)
+		end
+
+		if v:find("*") ~= nil then
+			InsertToDataTable(recipes, data, i)
+		else
+			InsertToDataTable(prefabs, data, i)
 		end
 	end
 
-	table.insert(GLOBAL.SIT_EVENTS, Event)
+	return stats, recipes, prefabs
 end
 
-local function HasTagInEvent(inst, ...)
-	-- it's quite brute-forcy right now. I have no idea how to handle events with tag.
-	local result = {}
-	for i, v in ipairs(GLOBAL.SIT_EVENTS) do
-		local raw = table.concat(v.tags)
-		for i2, v2 in ipairs({...}) do
-			if string.find(raw, v2) ~= nil then
-				table.insert(result, v.id)
+local function Excute(inst, data)
+	local stats, recipes, prefabs = Dataize(data)
+	
+	for i = 1, #stats, 2 do
+		if inst.components[stats[i]] ~= nil then
+			inst.components[stats[i]]:DoDelta(stats[i+1])
+		end
+	end
+
+	if inst.components.builder ~= nil then
+		for i = 1, #recipes, 2 do
+			inst.components.builder:UnlockRecipe(recipes[i])
+		end
+	end
+
+	if inst.components.inventory ~= nil then
+		inst.components.inventory.ignoresound = true
+		for i = 1, #prefabs, 2 do
+			local prefab_val = SpawnPrefab(prefabs[i])
+			if prefab_val == nil then
+				print("unkown prefab "..prefabs[i])
+			else
+				prefab_val:Remove()
+
+				for numtogive = 1, prefabs[i+1] do
+					local prefab = SpawnPrefab(prefabs[i])
+					if prefab.components.equippable ~= nil then
+						local eslot = prefab.components.equippable.equipslot
+						if inst.components.inventory.equipslots[eslot] == nil then
+							inst.components.inventory:Equip(prefab)
+						else
+							inst.components.inventory:GiveItem(prefab)
+						end
+					end
+				end
 			end
 		end
-	end
-
-	result = #result == 0 and nil or result
-	return result
-end
-
-local function OnEventListen(inst, ...)
-	local id = HasTagInEvent(inst, ...)
-	if id ~= nil then
-		for i, v in ipairs(id) do
-			GLOBAL.SIT_EVENTS[id].fn(inst, id) -- TODO?
-		end
+		inst.components.inventory.ignoresound = false
 	end
 end
