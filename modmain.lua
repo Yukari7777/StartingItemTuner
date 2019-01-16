@@ -71,6 +71,7 @@ local function FindFirstKeyIndex(list, tag)
 end
 
 local function HasKey(list, tag)
+	if list == nil then return end
 	if type(list) == "table" then
 		return table.contains(list, tag) -- There's an env in don't starve api.
 	else
@@ -115,67 +116,6 @@ local function GetWorldTags(tags)
 	end
 end
 
-local function RegisterEvent(name, data, tags)
-	local Event = {}
-	Event.id = #GLOBAL.SIT_EVENTS + 1
-	Event.doer = name
-	Event.tags = tags
-	Event.wtags = GetWorldTags(tags)
-	Event.data = data
-	Event.fn = function(inst)
-		if CheckWorldState(Event.wtags) then
-			Excute(inst, Event.data)
-		end
-	end
-
-	table.insert(GLOBAL.SIT_EVENTS, Event)
-end
--- Register Events
-for name, conditions in pairs(GLOBAL.SIT_DATA) do
-	for condition, data in pairs(conditions) do
-		local keyraw = condition
-		local leftover = keyraw
-		local ShouldAddNewspawnTag = true
-		local tags = {}
-
-		for sort, keys in pairs(_KEYWORDS) do
-			for index, key in ipairs(keys) do -- find keys in raw condition keys written in modinfo.
-				local i, j = string.find(leftover, key)
-
-				if i ~= nil and j ~= nil then
-					local tag = string.sub(leftover, i, j)
-					table.insert(tags, tag)
-
-					leftover = leftover:gsub(tag, "")
-				end
-			end
-
-			if sort ~= "other" and HasKey(tags, keys[1]) then -- "anytime", "always", ...
-				RemoveKey(tags, keys[1])
-				for i = 2, #keys do
-					AddKey(tags, keys[i])
-				end
-			end
-
-			if ShouldAddNewspawnTag and (sort == "respawn" or sort == "revived" and HasKey(tags, keys[index]) or HasKey(tags, "newspawn")) then
-				ShouldAddNewspawnTag = false
-			end
-
-			DeleteOverlaps(tags)
-		end
-
-		if ShouldAddNewspawnTag then
-			AddKey(tags, "newspawn")
-		end
-
-		if leftover ~= "" then
-			print("[Starting Item Tuner] unkown condition keyword \""..leftover.."\" in key \""..keyraw.."\" in "..(name == "AllPlayers" and "AllPlayers" or "character "..name))
-		end
-
-		RegisterEvent(name, data, tags)
-	end
-end
-
 local function CheckWorldState(wtags)
 	if wtags == nil then return true end
 		
@@ -217,15 +157,15 @@ local function Dataize(data)
 	local recipes = {}
 	local prefabs = {}
 
-	for i, key in ipairs(data) do
-		if HasKey(STATKEY, key) then
+	for i = 1, #data, 2 do
+		if HasKey(STATKEY, data[i]) then
 			InsertToDataTable(stats, data, i)
-		end
-
-		if v:find("*") ~= nil then
-			InsertToDataTable(recipes, data, i)
 		else
-			InsertToDataTable(prefabs, data, i)
+			if data[i]:find("*") ~= nil then
+				InsertToDataTable(recipes, data, i)
+			else
+				InsertToDataTable(prefabs, data, i)
+			end
 		end
 	end
 
@@ -243,20 +183,20 @@ local function Excute(inst, data)
 	
 	local builder = inst.components.builder
 	if builder ~= nil then
-		local unlock = recipes[i]:sub(2)
-		if unlock == "ALL" then 
-			for i, v in ipairs(require("techtree").AVAILABLE_TECH) do 
-				builder:UnlockRecipesForTech(v)
-			end
-		elseif unlock == "CREATIVE" then
-			if not builder.freebuildmode then
-				builder:GiveAllRecipes()
-			end
-		elseif unlock == unlock:match("%u") then
-			-- consider as techtree name if it's all uppercase. https://repl.it/@HimekaidouHatat/Is-Uppercase
-			builder:UnlockRecipesForTech({unlock = recipes[i+1]})
-		else
-			for i = 1, #recipes, 2 do
+		for i = 1, #recipes, 2 do
+			local unlock = recipes[i]:sub(2)
+			if unlock == "ALL" then 
+				for i, v in ipairs(require("techtree").AVAILABLE_TECH) do 
+					builder:UnlockRecipesForTech(v)
+				end
+			elseif unlock == "CREATIVE" then
+				if not builder.freebuildmode then
+					builder:GiveAllRecipes()
+				end
+			elseif unlock == unlock:match("%u*") then
+				-- consider as a techtree name if it's all uppercase. https://repl.it/@HimekaidouHatat/Is-Uppercase
+				builder:UnlockRecipesForTech({[unlock] = recipes[i+1]})
+			else
 				inst.components.builder:UnlockRecipe(unlock)
 			end
 		end
@@ -273,13 +213,10 @@ local function Excute(inst, data)
 
 				for numtogive = 1, prefabs[i+1] do
 					local prefab = SpawnPrefab(prefabs[i])
-					if prefab.components.equippable ~= nil then
-						local eslot = prefab.components.equippable.equipslot
-						if inst.components.inventory.equipslots[eslot] == nil then
-							inst.components.inventory:Equip(prefab)
-						else
-							inst.components.inventory:GiveItem(prefab)
-						end
+					if prefab.components.equippable ~= nil and inst.components.inventory.equipslots[prefab.components.equippable.equipslot] == nil then
+						inst.components.inventory:Equip(prefab)
+					else
+						inst.components.inventory:GiveItem(prefab)
 					end
 				end
 			end
@@ -288,16 +225,81 @@ local function Excute(inst, data)
 	end
 end
 
+local function RegisterEvent(name, data, tags)
+	local Event = {}
+	Event.id = #GLOBAL.SIT_EVENTS + 1
+	Event.doer = name
+	Event.tags = tags
+	Event.wtags = GetWorldTags(tags)
+	Event.data = data
+	Event.fn = function(inst)
+		if CheckWorldState(Event.wtags) then
+			Excute(inst, Event.data)
+		end
+	end
+
+	table.insert(GLOBAL.SIT_EVENTS, Event)
+end
+-- Register Events
+for name, conditions in pairs(GLOBAL.SIT_DATA) do
+	for condition, data in pairs(conditions) do
+		local keyraw = condition
+		local leftover = keyraw
+		local ShouldAddNewspawnTag = true
+		local tags = {}
+
+		for sort, keys in pairs(_KEYWORDS) do
+			for index, key in ipairs(keys) do -- find keys in raw condition keys written in modinfo.
+				local i, j = string.find(leftover, key)
+
+				if i ~= nil and j ~= nil then
+					local tag = string.sub(leftover, i, j)
+					table.insert(tags, tag)
+					print(tag)
+
+					leftover = leftover:gsub(tag, "")
+				end
+				
+				if ShouldAddNewspawnTag and ((sort == "respawn" or sort == "revived") and HasKey(tags, key) or HasKey(tags, "newspawn")) then
+					ShouldAddNewspawnTag = false
+				end
+			end
+
+			if sort ~= "other" and HasKey(tags, keys[1]) then -- "anytime", "always", ...
+				RemoveKey(tags, keys[1])
+				for i = 2, #keys do
+					AddKey(tags, keys[i])
+				end
+			end
+
+			DeleteOverlaps(tags)
+		end
+
+		if ShouldAddNewspawnTag then
+			print("ShouldAddNewspawnTag")
+			AddKey(tags, "newspawn")
+		end
+
+		if leftover ~= "" then
+			print("[Starting Item Tuner] unkown condition keyword \""..leftover.."\" in key \""..keyraw.."\" in "..(name == "AllPlayers" and "AllPlayers" or "character "..name))
+		end
+
+		RegisterEvent(name, data, tags)
+	end
+end
+
 local function GetIdsInEvent(inst, tags)
 	-- it's quite brute-forcy right now. I have no idea how to handle events with tag.
 	local result = {}
 	for i, v in ipairs(GLOBAL.SIT_EVENTS) do
 		local raw = table.concat(v.tags)
-		if HasKey(tags, v2) then
-			table.insert(result, v.id)
+		for k, v2 in pairs(tags) do
+			if HasKey(raw, v2) then
+				table.insert(result, v.id)
+			end
 		end
 	end
-
+		
 	if #result == 0 then
 		return nil
 	else
@@ -322,7 +324,9 @@ local function PushEvent(inst, ...)
 	end
 end
 
-local eventname = {
+GLOBAL.SITPushEvent = PushEvent
+
+local exnewspawn = {
 	"reviver", "heart", "amulet", "amulet", "resurrectionstone", "touchstone", "resurrectionstatue", "effigy"
 }
 
@@ -334,9 +338,9 @@ local function PushRespawnEvent(inst, data)
 	elseif data.source:HasTag("multiplayer_portal") then
 		PushEvent(inst, "portal")
 	else
-		local index = FindFirstKeyIndex(eventname, data.source.prefab)
+		local index = FindFirstKeyIndex(exnewspawn, data.source.prefab)
 		if index ~= nil then
-			PushEvent(inst, eventname[i+1])
+			PushEvent(inst, exnewspawn[i+1])
 		else
 			PushEvent(inst, "other")
 		end
