@@ -9,5 +9,25 @@ GLOBAL.SIT_DATA_RAW = {
 		["always"] = {
 			"rocks", 30, "unkownp", 20
 		},
+		["portal"] = {
+			"log", "berries", "sanity", 100, "health"
+		},
+		["caveportal"] = {
+			"moonrockidol"
+		},
+		["change"] = {
+			"ice"
+		},
+	},
+	["wilson"] = {
+		[""] = {
+			"beardhair", 4
+		},
+	},
+
+	["admin"] = {
+		["onload"] = {
+			--"**CREATIVE", "**SUPERGODMODE"
+		},
 	},
 }

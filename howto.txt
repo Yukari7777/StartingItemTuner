@@ -1,17 +1,32 @@
 You have to modify data.lua to apply settings. Modify it with any text tools. 
 Notepad is also OK. Just edit it and save it.
-But ensure backup this file if you don't want to lose it.
+But ensure backup this file if you don't want to lose your great settings.
 
 
 GLOBAL.SIT_DATA_RAW = {
 	["AllPlayers"] = {
 		["respawnnight"] = { 
-			"torch", "sanity", 3,
+			"torch",
 		},
 	},
 }
 
 Here's default settings in data.lua. 
+Explaining that, "For all players, give 1 torch when are resurrected by multiplayer portal(respawn portal), touchstone or meat effigy and it's nighttime."
+
+"AllPlayers" means all players(including mod characters). 
+You can put (prefab)name of the subject. Or the subject could be "admin".
+This will be described as "doer keywords".
+
+"respawnnight" is compound of "respawn" + "night".
+"respawn" is also compound of "portal" + "touchstone" + "effigy"
+You can confine or include various situation by simplely concatenate them. 
+This will be described as "situation keywords".
+
+"torch" one is what to give. 
+You can set number property on right next to the give.
+For example, "torch", 3, "
+
 
 
 AVAILABLE_TECH = { "SCIENCE", "MAGIC", "ANCIENT", "CELESTIAL", "SHADOW", "CARTOGRAPHY", "SCULPTING", "ORPHANAGE", "PERDOFFERING", "WARGOFFERING", "MADSCIENCE"}

@@ -8,8 +8,14 @@ local KnownModIndex = GLOBAL.KnownModIndex
 local SpawnPrefab = GLOBAL.SpawnPrefab
 local ShouldOverrideVanilla = GetModConfigData("ShouldOverrideVanila")
 local ShouldOverrideMod = GetModConfigData("ShouldOverrideMod")
+local DataRaw = GetModConfigData("Data")
+
+require "consolecommands"
 
 modimport "datatest.lua"
+if DataRaw ~= nil then
+	GLOBAL.SIT_DATA_RAW = DataRaw
+end
 GLOBAL.SIT_DATA = {}
 GLOBAL.SIT_EVENTS = {}
 -- Validate execution keys
@@ -49,10 +55,10 @@ local _KEYWORDS = {
 	time = { "anytime", "day", "dusk", "night" },
 	season = { "always", "spring", "summer", "autumn", "winter" },
 
-	respawn = { "respawn", "portal", "touchstone", "effigy", "newspawn" }, 
+	respawn = { "respawn", "portal", "touchstone", "effigy" }, 
 	revived = { "revived", "heart", "amulet", "debug", "other" },
 
-	other = { "change", "cave" }, -- do not check whether overlaps
+	other = { "onload", --[["change",]] "cave", "newspawn" }, -- do not check whether overlaps
 }
 
 local WORDTAGS = { "cave" } -- TODO : nightmare phase
@@ -118,7 +124,7 @@ end
 
 local function CheckWorldState(wtags)
 	if wtags == nil then return true end
-		
+	
 	local TheWorld = GLOBAL.TheWorld
 	if TheWorld == nil then return false end
 	
@@ -154,50 +160,64 @@ local function InsertToDataTable(data, t, i)
 end
 local function Dataize(data)
 	local stats = {}
-	local recipes = {}
 	local prefabs = {}
+	local specials = {}
 
 	for i = 1, #data, 2 do
 		if HasKey(STATKEY, data[i]) then
 			InsertToDataTable(stats, data, i)
 		else
 			if data[i]:find("*") ~= nil then
-				InsertToDataTable(recipes, data, i)
+				InsertToDataTable(specials, data, i)
 			else
 				InsertToDataTable(prefabs, data, i)
 			end
 		end
 	end
 
-	return stats, recipes, prefabs
+	return stats, specials, prefabs
 end
 
 local function Excute(inst, data)
-	local stats, recipes, prefabs = Dataize(data)
+	local stats, specials, prefabs = Dataize(data)
 	
-	for i = 1, #stats, 2 do
-		if inst.components[stats[i]] ~= nil then
-			inst.components[stats[i]]:DoDelta(stats[i+1])
+	inst:DoTaskInTime(5, function()
+		-- Wait until character's stats be able to do DoDelta from resurrect animation.
+		for i = 1, #stats, 2 do
+			if inst.components[stats[i]] ~= nil then
+				inst.components[stats[i]]:DoDelta(stats[i+1])
+			end
 		end
-	end
+	end)
 	
 	local builder = inst.components.builder
 	if builder ~= nil then
-		for i = 1, #recipes, 2 do
-			local unlock = recipes[i]:sub(2)
-			if unlock == "ALL" then 
+		for i = 1, #specials, 2 do
+			local command = specials[i]:sub(2)
+			if command == "ALL" then 
 				for i, v in ipairs(require("techtree").AVAILABLE_TECH) do 
-					builder:UnlockRecipesForTech(v)
+					builder:commandRecipesForTech(v)
 				end
-			elseif unlock == "CREATIVE" then
+			elseif command == "*CREATIVE" then
 				if not builder.freebuildmode then
-					builder:GiveAllRecipes()
+					--builder:GiveAllRecipes()
+					GLOBAL.c_freecrafting()
 				end
-			elseif unlock == unlock:match("%u*") then
+			elseif command == "*GODMODE" then
+				if inst.components.health ~= nil and not inst.components.health.invincible then
+					GLOBAL.c_godmode(inst)
+				end
+			elseif command == "*SUPERGODMODE" then
+				if inst.components.health ~= nil and not inst.components.health.invincible then
+					GLOBAL.c_supergodmode(inst)
+				end
+			elseif command == "*NOATTACK" then
+				GLOBAL.c_makeinvisible()
+			elseif command == command:match("%u*") then
 				-- consider as a techtree name if it's all uppercase. https://repl.it/@HimekaidouHatat/Is-Uppercase
-				builder:UnlockRecipesForTech({[unlock] = recipes[i+1]})
+				builder:commandRecipesForTech({[command] = specials[i+1]})
 			else
-				inst.components.builder:UnlockRecipe(unlock)
+				inst.components.builder:commandRecipe(command)
 			end
 		end
 	end
@@ -207,7 +227,7 @@ local function Excute(inst, data)
 		for i = 1, #prefabs, 2 do
 			local prefab_val = SpawnPrefab(prefabs[i])
 			if prefab_val == nil then
-				print("[Starting Item Tuner] unkown prefab "..prefabs[i])
+				print("[Starting Item Tuner] unkown prefab \""..prefabs[i].."\"")
 			else
 				prefab_val:Remove()
 
@@ -255,7 +275,6 @@ for name, conditions in pairs(GLOBAL.SIT_DATA) do
 				if i ~= nil and j ~= nil then
 					local tag = string.sub(leftover, i, j)
 					table.insert(tags, tag)
-					print(tag)
 
 					leftover = leftover:gsub(tag, "")
 				end
@@ -276,7 +295,6 @@ for name, conditions in pairs(GLOBAL.SIT_DATA) do
 		end
 
 		if ShouldAddNewspawnTag then
-			print("ShouldAddNewspawnTag")
 			AddKey(tags, "newspawn")
 		end
 
@@ -359,16 +377,24 @@ AddPlayerPostInit(function(inst)
 		else
 			inst.starting_inventory = ShouldOverrideVanilla and {} or inst.starting_inventory
 		end
-
+		
 		PushEvent(inst, "newspawn")
 		inst.starting_inventory = nil
 		_OnNewSpawn(inst)
 	end
 
+	--[[
 	local _LoadForReroll = inst.LoadForReroll 
-	inst.LoadForReroll = function(inst)
-		_LoadForReroll(inst)
+	inst.LoadForReroll = function(inst, data) 
+		_LoadForReroll(inst, data)
 		PushEvent(inst, "change")
+	end
+	]]--
+
+	local _OnLoad = inst.OnLoad
+	inst.OnLoad = function(inst, data)
+		_OnLoad(inst, data)
+		PushEvent(inst, "onload")
 	end
 
 	inst:ListenForEvent("respawnfromghost", PushRespawnEvent)

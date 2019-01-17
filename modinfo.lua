@@ -23,7 +23,8 @@ configuration_options = {
 	{
 		name = "ShouldOverrideVanila",
 		hover = text,
-		description = "If true, default starting items of vanila charachers will be removed and replaced. Otherwise, will be added to default starting items.",
+		description = "If true, default starting items of vanila charachers will be removed and replaced."
+					.."Otherwise, will be added to default starting items.",
 		options = on_off,
 		default = false,
 	},
@@ -35,7 +36,10 @@ configuration_options = {
 		default = false,
 	},
 	{
-		name = "datatable",
-		description = "You have to add settings in data.lua in the mod folder."
+		name = "Data",
+		description = "You have to add settings in data.lua in the mod folder. "
+					.."Or you can make modoverride config which has higher priority."
+					.."If both data exist, modoverride's will be applied."
+					.."read howto.txt to see description."
 	},
 }
