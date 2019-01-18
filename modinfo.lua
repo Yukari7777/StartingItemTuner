@@ -1,7 +1,7 @@
-name = "Starting Item Tuner"
-description = "Let you set starting items you want."
+name = "Ultimate Starting Item Tuner"
+description = "Let you set starting items you want. Ultimately."
 author = "Yakumo Yukari"
-version = "1.0.0"
+version = "1.0"
 forumthread = ""
 api_version = 6
 api_version_dst = 10
@@ -37,9 +37,10 @@ configuration_options = {
 	},
 	{
 		name = "Data",
-		description = "You have to add settings in data.lua in the mod folder. "
+		description = "You have to add settings in data.lua in the mod folder."
 					.."Or you can make modoverride config which has higher priority."
 					.."If both data exist, modoverride's will be applied."
-					.."read howto.txt to see description."
+					.."read howto.txt to see description.",
+		default = {},
 	},
 }

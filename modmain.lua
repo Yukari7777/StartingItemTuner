@@ -2,6 +2,7 @@ PrefabFiles = { }
 
 local assert = GLOBAL.assert
 local require = GLOBAL.require
+local next = GLOBAL.next
 local tonumber = GLOBAL.tonumber
 local Prefabs = GLOBAL.Prefabs
 local KnownModIndex = GLOBAL.KnownModIndex
@@ -13,7 +14,7 @@ local DataRaw = GetModConfigData("Data")
 require "consolecommands"
 
 modimport "datatest.lua"
-if DataRaw ~= nil then
+if next(DataRaw) ~= nil then
 	GLOBAL.SIT_DATA_RAW = DataRaw
 end
 GLOBAL.SIT_DATA = {}
@@ -24,27 +25,32 @@ for k, v in pairs(GLOBAL.SIT_DATA_RAW) do
 	for k2, v2 in pairs(v) do
 		local data = {}
 		local dindex, rindex = 1, 1
-		repeat
-			local c1 = tonumber(GLOBAL.SIT_DATA_RAW[k][k2][rindex]) == nil
-			local c2 = tonumber(GLOBAL.SIT_DATA_RAW[k][k2][rindex+1]) == nil
-			if rindex == 1 and not c1 then
-				print("[Starting Item Tuner] wrong data at "..k.."."..k2.." #"..rindex..", first key should not be numeric.")
-				rindex = rindex + 1
-			elseif c1 and c2 then
-				data[dindex] = GLOBAL.SIT_DATA_RAW[k][k2][rindex]
-				data[dindex+1] = 1
-				rindex = rindex + 1
-				dindex = dindex + 2
-			elseif c1 and not c2 then
-				data[dindex] = GLOBAL.SIT_DATA_RAW[k][k2][rindex]
-				data[dindex+1] = GLOBAL.SIT_DATA_RAW[k][k2][rindex+1]
-				rindex = rindex + 2
-				dindex = dindex + 2
-			else
-				print("[Starting Item Tuner] wrong data at #"..rindex..", numeric data was given two times in a row.")
-				rindex = rindex + 1
-			end
-		until rindex > #GLOBAL.SIT_DATA_RAW[k][k2]
+
+		if #GLOBAL.SIT_DATA_RAW[k][k2] == 0 then 
+			print("[Starting Item Tuner] wrong execution data at "..k.."."..k2..", no data given.") 
+		else
+			repeat
+				local c1 = GLOBAL.SIT_DATA_RAW[k][k2][rindex] ~= tonumber(GLOBAL.SIT_DATA_RAW[k][k2][rindex])
+				local c2 = GLOBAL.SIT_DATA_RAW[k][k2][rindex+1] ~= tonumber(GLOBAL.SIT_DATA_RAW[k][k2][rindex+1]) or GLOBAL.SIT_DATA_RAW[k][k2][rindex+1] == nil
+				if rindex == 1 and not c1 then
+					print("[Starting Item Tuner] wrong execution data at "..k.."."..k2.." #"..rindex..", first key should not be numeric.")
+					rindex = rindex + 1
+				elseif c1 and c2 then
+					data[dindex] = GLOBAL.SIT_DATA_RAW[k][k2][rindex]
+					data[dindex+1] = 1
+					rindex = rindex + 1
+					dindex = dindex + 2
+				elseif c1 and not c2 then
+					data[dindex] = GLOBAL.SIT_DATA_RAW[k][k2][rindex]
+					data[dindex+1] = GLOBAL.SIT_DATA_RAW[k][k2][rindex+1]
+					rindex = rindex + 2
+					dindex = dindex + 2
+				else
+					print("[Starting Item Tuner] wrong execution data at "..k.."."..k2.." #"..rindex..", numeric data was given two times in a row.")
+					rindex = rindex + 1
+				end
+			until rindex > #GLOBAL.SIT_DATA_RAW[k][k2]
+		end
 
 		_data[k2] = data
 	end
@@ -58,7 +64,7 @@ local _KEYWORDS = {
 	respawn = { "respawn", "portal", "touchstone", "effigy" }, 
 	revived = { "revived", "heart", "amulet", "debug", "other" },
 
-	other = { "onload", --[["change",]] "cave", "newspawn" }, -- do not check whether overlaps
+	other = { "onload", "change", "cave", "newspawn" }, -- do not check whether overlaps
 }
 
 local WORDTAGS = { "cave" } -- TODO : nightmare phase
@@ -115,11 +121,7 @@ local function GetWorldTags(tags)
 		end
 	end
 	
-	if #result == 0 then
-		return nil
-	else
-		return result
-	end
+	return next(result) ~= nil and result or nil
 end
 
 local function CheckWorldState(wtags)
@@ -196,7 +198,7 @@ local function Excute(inst, data)
 			local command = specials[i]:sub(2)
 			if command == "ALL" then 
 				for i, v in ipairs(require("techtree").AVAILABLE_TECH) do 
-					builder:commandRecipesForTech(v)
+					builder:UnlockRecipesForTech(v)
 				end
 			elseif command == "*CREATIVE" then
 				if not builder.freebuildmode then
@@ -215,9 +217,9 @@ local function Excute(inst, data)
 				GLOBAL.c_makeinvisible()
 			elseif command == command:match("%u*") then
 				-- consider as a techtree name if it's all uppercase. https://repl.it/@HimekaidouHatat/Is-Uppercase
-				builder:commandRecipesForTech({[command] = specials[i+1]})
+				builder:UnlockRecipesForTech({[command] = specials[i+1]})
 			else
-				inst.components.builder:commandRecipe(command)
+				inst.components.builder:UnlockRecipe(command)
 			end
 		end
 	end
@@ -231,7 +233,7 @@ local function Excute(inst, data)
 			else
 				prefab_val:Remove()
 
-				for numtogive = 1, prefabs[i+1] do
+				for j = 1, prefabs[i+1] do
 					local prefab = SpawnPrefab(prefabs[i])
 					if prefab.components.equippable ~= nil and inst.components.inventory.equipslots[prefab.components.equippable.equipslot] == nil then
 						inst.components.inventory:Equip(prefab)
@@ -279,7 +281,7 @@ for name, conditions in pairs(GLOBAL.SIT_DATA) do
 					leftover = leftover:gsub(tag, "")
 				end
 				
-				if ShouldAddNewspawnTag and ((sort == "respawn" or sort == "revived") and HasKey(tags, key) or HasKey(tags, "newspawn")) then
+				if ShouldAddNewspawnTag and ((sort == "respawn" or sort == "revived") and HasKey(tags, key) or HasKey(tags, "newspawn") or HasKey(tags, "change")) then
 					ShouldAddNewspawnTag = false
 				end
 			end
@@ -318,11 +320,7 @@ local function GetIdsInEvent(inst, tags)
 		end
 	end
 		
-	if #result == 0 then
-		return nil
-	else
-		return result
-	end
+	return next(result) ~= nil and result or nil
 end
 
 local function IsValidDoer(inst, key)
@@ -365,6 +363,15 @@ local function PushRespawnEvent(inst, data)
 	end
 end
 
+local function OnNewSpawnEvent(inst)
+	if inst.IsSaveForReroll then
+		inst.IsSaveForReroll = nil
+		PushEvent(inst, "change")
+	else
+		PushEvent(inst, "newspawn")
+	end
+end
+
 local function IsModCharacter(inst)
 	return not table.contains(GLOBAL.DST_CHARACTERLIST, inst.prefab)
 end
@@ -377,19 +384,23 @@ AddPlayerPostInit(function(inst)
 		else
 			inst.starting_inventory = ShouldOverrideVanilla and {} or inst.starting_inventory
 		end
-		
-		PushEvent(inst, "newspawn")
-		inst.starting_inventory = nil
 		_OnNewSpawn(inst)
+		inst:DoTaskInTime(0, OnNewSpawnEvent)
+		-- I have to do this because LoadForReroll is called after OnNewSpawn Event.
+		-- But we don't know if the character is whether respawned or rerolled on the point of OnNewSpawn.
+		-- Since the character actually despawns after rerolling or respawning which means unsaved data will all be vanished.
+		-- So checking whether SaveForReroll one frame later was the best idea.
+		
+		inst.starting_inventory = nil
 	end
 
-	--[[
+	
 	local _LoadForReroll = inst.LoadForReroll 
 	inst.LoadForReroll = function(inst, data) 
 		_LoadForReroll(inst, data)
-		PushEvent(inst, "change")
+		inst.IsSaveForReroll = true
 	end
-	]]--
+
 
 	local _OnLoad = inst.OnLoad
 	inst.OnLoad = function(inst, data)

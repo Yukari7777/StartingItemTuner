@@ -16,7 +16,7 @@ GLOBAL.SIT_DATA_RAW = {
 			"moonrockidol"
 		},
 		["change"] = {
-			"ice"
+			"moonrockidol"
 		},
 	},
 	["wilson"] = {

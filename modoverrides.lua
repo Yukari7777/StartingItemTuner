@@ -2,12 +2,12 @@ return {
 	["workshop-???"] = { -- If you have overrides text already in your server, override the text from here-
 	configuration_options = {
 	ShouldOverrideMod=false, -- Don't forget to set this again.
-    ShouldOverrideVanila=false,
+	ShouldOverrideVanila=false,
 	Data = {
 		["AllPlayers"] = {
 			["respawnnight"] = { 
 				"torch"
 			},
 		},
-	}}},-- -to here
+	}}, enabled=true },-- -to here
 }

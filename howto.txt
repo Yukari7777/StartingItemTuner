@@ -1,6 +1,7 @@
-You have to modify data.lua to apply settings. Modify it with any text tools. 
-Notepad is also OK. Just edit it and save it.
-But ensure backup this file if you don't want to lose your great settings.
+You have to modify data.lua or modoverrides.lua to apply settings.
+Modify it with any text tools. Notepad is also OK. 
+Just edit it with correct rules and save it.
+Ensure backup your file if you don't want to lose your great settings.
 
 
 GLOBAL.SIT_DATA_RAW = {
@@ -24,73 +25,140 @@ You can confine or include various situation by simplely concatenate them.
 This will be described as "situation keywords".
 
 "torch" one is what to give. 
-You can set number property on right next to the give.
-For example, "torch", 3, "
+You can set 'number property' on right next to the give.
+If you set like 	"torch", 3		this, this will give 3 torches.
+You can also give the specific amount of status or unlock recipes you want.
+For more information, read "execution keywords".
 
 
 
-AVAILABLE_TECH = { "SCIENCE", "MAGIC", "ANCIENT", "CELESTIAL", "SHADOW", "CARTOGRAPHY", "SCULPTING", "ORPHANAGE", "PERDOFFERING", "WARGOFFERING", "MADSCIENCE"}
+[What is prefab?]
+To say it simple, Prefab is an 'object'. 
+Your playable character is also a prefab.
+Each object has its own "prefab name", also be called "console name" or "debug name".
+So you have to find its prefab name you want to add.
+http://dontstarve.wikia.com/wiki/Console/Prefab_List
+Refer here if you want to know the prefab name by the in-game name.
 
-["AllPlayers"] = {
-				--["spring"] = {
-					-- "grass_umbrella", "*rainhat"
-					-- gives 1 pretty parasol and unlock rainhat's recipe when is spring. 
 
-					-- You can unlock specific item's recipe by writing "*" in the keyword.
-					-- If you want blue print instead, add "_blueprint" instead. ex) rainhat_blueprint
-				--},
-				--["summer"] = { },
-				--["autumn"] = { },
-				--["winter"] = { },
-				--["always"] = { 
-					-- four seasons.
-					-- same as "springsummerautumnwinter", "".
-					-- ""; if no season keyword is given, consider it as four seasons.
-					-- Don't be confused. This is only just cover FOUR SEASONS.
-				--},  
+[Basic grammatic rules]
+Programmatically I mean. Reading preset settings first could be better though. 
+[프리셋 링크]
 
-				--["day"] = { },
-				--["dusk"] = { },
-				--["night"] = { },
-				--["anytime"] = { 
-					-- same as "daydusknight"
-					-- if no season keyword is given, consider it anytime(day + dusk + night).
-				--},
-				
-				--["newspawn"] = { 
-					-- if neither this keyword nor other condition below is given, consider it exist.
-					-- For example, "day" is same as "daynewspawn".
-					-- "dayrespawn" is not same as "dayrespawnnewspawn"
-					
-				--},
+If you want to add something, things can be seperated by comma(,)
+Also, It is recommanded to follow indentation rules.
 
-				-- [""] = { } -- same as "anytimealwaysnewspawn"
-				--------------------------------------------------------------------------------------
-				
-				["respawnnight"] = { 
-					-- when the character is resurrected(including newspawn, touchstone, but not telltale heart or life giving amulet.) and it's night.
-					"torch", "sanity", 30 
-					-- you can give the specific amount of stats.
-					
-					-- same as "respawnalways", "portaltouchstoneeffigynewspawn", "portaltouchstoneeffigyalwaysnewspawn"
-				},
-				-- ["portal"] -- only when the character is ressurected by Florid Postern (multiplayer portal)
-				-- ["touchstone"] = { } -- ~ by Touchstone
-				-- ["effigy"] = { } -- ~ by Meat Effigy
-				
-				-- ["revived"] = { } -- when the character is revived by something else.
-				-- ["heart"] -- only when the character is revived by telltale heart.
-				-- ["amulet"] -- ~ by life giving amulet
-				-- ["debug"] = { } -- ~ via console or by other method.
-				
-				-- ["change"] = { }, -- when you change character with Moon Rock Idol.
-				
-				-- ["respawnrevivedspringsummer"] = {} -- you can combine multiple options. and keyword order is not important.
-			},
-
-			["wilson"] = {
-				[""] = {"beardhair", 4} -- gives 4 beards when first spawn.
-			},
-			-- ["yakumoyukari"] = { [""] = {"humanmeat", 4, "schemetool"} }, 
-			-- also supports mod characters and mod items(but you have to put prefab(console) name).
+Here's an example, If you want to add some nodes :
+GLOBAL.SIT_DATA_RAW = {
+	["AllPlayers"] = {
+		["respawnnight"] = { 
+			"torch",
 		},
+		["newspawn"] = {
+			"log", 20, "ice", 3
+		},
+	},
+	
+	["wilson"] = {
+		["newspawnsummer"] = {
+			"beardhair", 4
+		},
+	},
+}
+
+More example is listed in preset settings.
+[프리셋 링크]
+
+
+[doer keywords]
+Available Keywords = {"AllPlayers", "admin", (any prefab name that is player)}
+
+- "AllPlayers" will apply to all players.
+- "admin" will apply to all admins.
+
+(any prefab name that is player) means, 
+- if you want Wilson, put "wilson".
+- if you want Maxwell, put "waxwell" (you have to know its prefab name)
+- if you want Wigfrid, put "wathgrithr".
+- if you want Yakumo Yukari the mod character, put "yakumoyukari".
+
+
+[situation keywords]
+Available Keywords = {
+	time = { "anytime", "day", "dusk", "night" },
+	season = { "always", "spring", "summer", "autumn", "winter" },
+	
+	respawn = { "respawn", "portal", "touchstone", "effigy" }, 
+	revived = { "revived", "heart", "amulet", "debug", "other" },
+
+	other = { "onload", "cave", "change", "newspawn" }
+}
+There're some sort keys in keywords but only values that is covered by "" will only work. Don't be confused.
+
+- "day" is day, "dusk" is dusk. and so on.
+"anytime" will be converted to "daydusknight". 
+So you can confine which time or season to do stuff.
+└ And "always", "respawn", "revived" does same.("respawn" => "portaltouchstoneeffigy")
+
+- "heart" is when the character is resurrected by Telltale Heart.
+ㄴ "touchstone", "effigy" does same.
+
+- "amulet" is when the character is resurrected by Life Giving Amulet.
+- "debug" is when the character is ressurected by console commands.
+- "other" is when the character is ressurected by unkown sources.
+- "portal" is when the character is 'resurrected' by multiplayer portal(Floid Postern). Don't be confused with newspawn.
+- "change" is when the characher is spawned after using Moon Rock Idol on Celestial Portal.
+
+- if you compound multiple keys, you are 'including' the multiple situations.
+"daydusk" will execute the stuff when it's 'day OR dusk'.
+"springsummer" will execute when it's 'spring OR summer'.
+
+- "onload" is when the prefab(player) gets loaded.
+Be cautious that prefab will do loaded everytime you go to cave or exit from cave.
+So giving items in "onload" situation is inappropriate. 
+
+- if none of values in time and season is given, it will be considered "anytime" and "always" each.
+So "respawnnight" is same condition of "respawnnightanytimealways" or "respawnnightalways". (will run both if you seperate them though.)
+
+- if none of values in respawn and revived is given, "newspawn" key will be added automatically.
+So "onload" is same condition of "onloadnewspawn". (will run both if you seperate them though.)
+
+
+[execution keywords]
+Available Keywords = { 
+	(any prefab name that is inventory item), *(any prefab name that can be crafted), *ALL, *(any Tech(all uppercase) that is currently exist on your server)
+	**CREATIVE, **GODMODE, **SUPERGODMODE, **NOATTACK
+}
+Tech = { "SCIENCE", "MAGIC", "ANCIENT", "CELESTIAL", "SHADOW", "CARTOGRAPHY", "SCULPTING", "ORPHANAGE", "PERDOFFERING", "WARGOFFERING", "MADSCIENCE", (other Tech name added by mod which should be all upper-cased)}
+
+You can search some items' prefab name in here : http://dontstarve.wikia.com/wiki/Console/Prefab_List
+Or you can search the item on the wiki and the prefab name is written at "DebugSpawn"
+If you put a numeric key next to the keyword, that will be "number property".
+if number property is not given, default is 1.
+
+- If the keyword is an inventory item. Number property means how much to give item.
+└ "torch", 3 means "give 3 torches"
+
+- If the keyword is written with *(prefab name), the recipe of its item will be unlocked. Number property will be ignored.
+└ "*goldenpickaxe" will unlock the recipe of golden pickaxe(Opulent Pickaxe).
+└ However even you unlock pick/axe's recipe by "*multitool_axe_pickaxe", You still need Ancient Pseudoscience Station on near to craft.
+  Any other recipes that need special condition will also be applied same.
+
+- If the keyword is written with *(Tech), the recipe that requires the tech will be unlocked. Number property means the level of tech.
+└ You have to write Tech in uppercase or it'll be considered an item name. Refer Listed Tech above.
+└ "*SCIENCE", 2 will unlock all recipes that requires level 2 science machine(Alchemy Engine).
+└ If you don't put the number property, level 1 of the Tech will be unlocked.
+└ However even you unlock ANCIENT Tech, You still need Ancient Pseudoscience Station on near to craft.
+  Any other recipes that need special condition will also be applied same.
+  Also, mini Ancient Station's Tech level is 2 not 1. Full Station's Tech level is 4 not 2.
+  
+- If the keyword is "*ALL", all recipes will be unlocked. 
+
+- If the keyword is "**CREATIVE", you will go to free-build-mode. (same with console command c_freecrafting())
+
+- If the keyword is "**GODMODE", you will go to godmode. (same with console command c_godmode())
+
+- If the keyword is "**SUPERGODMODE", you will go to supergodmode. (same with console command c_supergodmode())
+└ The difference with godmode is, your stats will be fully restored in supergodmode.
+
+- If the keyword is "**NOATTACK", you will not be targetted. (same with console command c_makeinvisible())
