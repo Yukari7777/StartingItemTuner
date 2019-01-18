@@ -1,7 +1,7 @@
 name = "Ultimate Starting Item Tuner"
 description = "Let you set starting items you want. Ultimately."
 author = "Yakumo Yukari"
-version = "1.0"
+version = "1.0.1"
 forumthread = ""
 api_version = 6
 api_version_dst = 10

@@ -43,7 +43,9 @@ Refer here if you want to know the prefab name by the in-game name.
 
 [Basic grammatic rules]
 Programmatically I mean. Reading preset settings first could be better though. 
-[프리셋 링크]
+https://steamcommunity.com/workshop/filedetails/discussion/1627929571/1741105805749726550/
+https://steamcommunity.com/workshop/filedetails/discussion/1627929571/1741105805750043744/
+https://steamcommunity.com/workshop/filedetails/discussion/1627929571/1741105805750128469/
 
 If you want to add something, things can be seperated by comma(,)
 Also, It is recommanded to follow indentation rules.
@@ -67,7 +69,6 @@ GLOBAL.SIT_DATA_RAW = {
 }
 
 More example is listed in preset settings.
-[프리셋 링크]
 
 
 [doer keywords]

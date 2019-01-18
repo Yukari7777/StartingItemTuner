@@ -13,7 +13,7 @@ local DataRaw = GetModConfigData("Data")
 
 require "consolecommands"
 
-modimport "datatest.lua"
+modimport "data.lua"
 if next(DataRaw) ~= nil then
 	GLOBAL.SIT_DATA_RAW = DataRaw
 end
@@ -27,13 +27,13 @@ for k, v in pairs(GLOBAL.SIT_DATA_RAW) do
 		local dindex, rindex = 1, 1
 
 		if #GLOBAL.SIT_DATA_RAW[k][k2] == 0 then 
-			print("[Starting Item Tuner] wrong execution data at "..k.."."..k2..", no data given.") 
+			print("[Ultimate Starting Item Tuner] wrong execution data at "..k.."."..k2..", no data given.") 
 		else
 			repeat
 				local c1 = GLOBAL.SIT_DATA_RAW[k][k2][rindex] ~= tonumber(GLOBAL.SIT_DATA_RAW[k][k2][rindex])
 				local c2 = GLOBAL.SIT_DATA_RAW[k][k2][rindex+1] ~= tonumber(GLOBAL.SIT_DATA_RAW[k][k2][rindex+1]) or GLOBAL.SIT_DATA_RAW[k][k2][rindex+1] == nil
 				if rindex == 1 and not c1 then
-					print("[Starting Item Tuner] wrong execution data at "..k.."."..k2.." #"..rindex..", first key should not be numeric.")
+					print("[Ultimate Starting Item Tuner] wrong execution data at "..k.."."..k2.." #"..rindex..", first key should not be numeric.")
 					rindex = rindex + 1
 				elseif c1 and c2 then
 					data[dindex] = GLOBAL.SIT_DATA_RAW[k][k2][rindex]
@@ -46,7 +46,7 @@ for k, v in pairs(GLOBAL.SIT_DATA_RAW) do
 					rindex = rindex + 2
 					dindex = dindex + 2
 				else
-					print("[Starting Item Tuner] wrong execution data at "..k.."."..k2.." #"..rindex..", numeric data was given two times in a row.")
+					print("[Ultimate Starting Item Tuner] wrong execution data at "..k.."."..k2.." #"..rindex..", numeric data was given two times in a row.")
 					rindex = rindex + 1
 				end
 			until rindex > #GLOBAL.SIT_DATA_RAW[k][k2]
@@ -229,7 +229,7 @@ local function Excute(inst, data)
 		for i = 1, #prefabs, 2 do
 			local prefab_val = SpawnPrefab(prefabs[i])
 			if prefab_val == nil then
-				print("[Starting Item Tuner] unkown prefab \""..prefabs[i].."\"")
+				print("[Ultimate Starting Item Tuner] unkown prefab \""..prefabs[i].."\"")
 			else
 				prefab_val:Remove()
 
@@ -301,7 +301,7 @@ for name, conditions in pairs(GLOBAL.SIT_DATA) do
 		end
 
 		if leftover ~= "" then
-			print("[Starting Item Tuner] unkown condition keyword \""..leftover.."\" in key \""..keyraw.."\" in "..(name == "AllPlayers" and "AllPlayers" or "character "..name))
+			print("[Ultimate Starting Item Tuner] unkown condition keyword \""..leftover.."\" in key \""..keyraw.."\" in "..(name == "AllPlayers" and "AllPlayers" or "character "..name))
 		end
 
 		RegisterEvent(name, data, tags)
