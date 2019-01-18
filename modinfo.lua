@@ -12,6 +12,7 @@ all_clients_require_mod = true
 icon_atlas = "modicon.xml"
 icon = "modicon.tex"
 server_filter_tags = {"startingitems"}
+folder_name = folder_name or ""
 
 local text = "Please read descriptions in \n(DST install folder)/"..folder_name.."/modinfo.lua."
 local on_off = {
