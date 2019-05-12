@@ -10,13 +10,17 @@ local SpawnPrefab = GLOBAL.SpawnPrefab
 local ShouldOverrideVanilla = GetModConfigData("ShouldOverrideVanila")
 local ShouldOverrideMod = GetModConfigData("ShouldOverrideMod")
 local DataRaw = GetModConfigData("Data")
+local ForceLoad = GetModConfigData("ForceLoadData")
 
 require "consolecommands"
 
-modimport "data.lua"
-if next(DataRaw) ~= nil then
+if ForceLoad ~= 1 then
+	modimport "data.lua"
+end
+if ForceLoad ~= 2 and next(DataRaw) ~= nil then
 	GLOBAL.SIT_DATA_RAW = DataRaw
 end
+
 GLOBAL.SIT_DATA = {}
 GLOBAL.SIT_EVENTS = {}
 -- Validate execution keys
@@ -180,6 +184,18 @@ local function Dataize(data)
 	return stats, specials, prefabs
 end
 
+local function ExecuteConsoleCommand(fnstr, guid)
+	local _ThePlayer = GLOBAL.ThePlayer
+	GLOBAL.ThePlayer = GLOBAL.Ents[guid]
+
+	local status, reason = GLOBAL.pcall(GLOBAL.loadstring(fnstr))
+    if not status then
+        GLOBAL.nolineprint("[Ultimate Starting Item Tuner] Error occrued during excuting the command.\nCommand : "..fnstr.."\n"..reason)
+    end
+
+	GLOBAL.ThePlayer = _ThePlayer
+end
+
 local function Excute(inst, data)
 	local stats, specials, prefabs = Dataize(data)
 	
@@ -215,8 +231,14 @@ local function Excute(inst, data)
 				end
 			elseif command == "*NOATTACK" then
 				GLOBAL.c_makeinvisible()
+			elseif command:find(":") ~= nil then
+				-- consider the command as the console command line. Do remote excute. 
+				-- inst is evaluated to ThePlayer. 
+				-- For example, "*:ThePlayer.components.talker:Say(\"TEST\")" will let the player to say TEST. 
+				-- Beware of the \ before ".      "TEST" - (x)  /  \"TEST\" - (o)
+				ExecuteConsoleCommand(command:sub(2), inst.GUID)
 			elseif command == command:match("%u*") then
-				-- consider as a techtree name if it's all uppercase. https://repl.it/@HimekaidouHatat/Is-Uppercase
+				-- consider the command as a techtree name if it's all uppercase. https://repl.it/@HimekaidouHatat/Is-Uppercase
 				builder:UnlockRecipesForTech({[command] = specials[i+1]})
 			else
 				inst.components.builder:UnlockRecipe(command)

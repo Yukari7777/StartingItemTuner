@@ -1,7 +1,7 @@
 name = "Ultimate Starting Item Tuner"
 description = "Let you set starting items you want. Ultimately."
 author = "Yakumo Yukari"
-version = "1.0.1"
+version = "1.1"
 forumthread = ""
 api_version = 6
 api_version_dst = 10
@@ -14,10 +14,14 @@ icon = "modicon.tex"
 server_filter_tags = {"startingitems"}
 folder_name = folder_name or ""
 
+if not folder_name:find("workshop-") then
+    name = "UST - Test"
+end
+
 local text = "Please read descriptions in \n(DST install folder)/"..folder_name.."/modinfo.lua."
 local on_off = {
-	{ description = "true", data = true },
 	{ description = "false", data = false },
+	{ description = "true", data = true },
 }
 
 configuration_options = {
@@ -32,9 +36,22 @@ configuration_options = {
 	{
 		name = "ShouldOverrideMod",
 		hover = text,
-		description = "Same with the above, but it's only for mod characters.",
+		description = "Same with the above, but it's applied only for mod characters.",
 		options = on_off,
 		default = false,
+	},
+	{
+		name = "ForceLoadData",
+		hover = text,
+		description = "If both data.lua and modoverrides.lua data is written, modoverrides.lua's data overrides the data.lua's by default."
+					.."Which means modoverrides.lua data is applied in that case."
+					.."Forcibly set which one is to load.",
+		options = {
+			{ description = "default", data = 0 },
+			{ description = "modoverrides.lua", data = 1 },
+			{ description = "data.lua", data = 2 },
+		},
+		default = 0,
 	},
 	{
 		name = "Data",
